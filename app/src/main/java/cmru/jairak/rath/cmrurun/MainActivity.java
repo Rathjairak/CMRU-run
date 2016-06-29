@@ -107,13 +107,19 @@ public class MainActivity extends AppCompatActivity {
                 } else if (passwordString.equals(truePasswordString)){
                     //password true
                     Toast.makeText(context, "Welcome" +nameUserString, Toast.LENGTH_SHORT).show();
+
+                    Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+                    intent.putExtra("Name", nameUserString);
+                    startActivity(intent);
+                    finish();
+
                 } else {
                     // password fail
                     MyAlert myAlert = new MyAlert();
                     myAlert.myDialog(context, "Password False", "Please Try Again");
                 }
 
-// OK
+
 
             } catch (Exception e) {
                 Log.d("29June", "e onPost ==>" + e.toString());

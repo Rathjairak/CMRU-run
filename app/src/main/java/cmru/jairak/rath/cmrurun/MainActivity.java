@@ -1,19 +1,25 @@
 package cmru.jairak.rath.cmrurun;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
 import com.squareup.picasso.Picasso;
 
 public class MainActivity extends AppCompatActivity {
 
     //Explicit
     private static final String urlLogo = "http://swiftcodingthai.com/cmru/cmru_logo.png";
+    private static final String urlJSON = "http://swiftcodingthai.com/cmru/php_get_user_rathjairak.php";
     private ImageView imageView;
     private EditText userEditText, passwordEditText;
     private String userString, passwordString;
@@ -35,12 +41,45 @@ public class MainActivity extends AppCompatActivity {
     //Create Inner Class
     private class SynUser extends AsyncTask<Void, Void, String> {
 
-        @Override
+        //Explicit
+        private Context context;
+        private String strURL;
+
+// สร้าง Constructor Alt + Insert
+
+        public SynUser(Context context, String strURL) {
+            this.context = context;
+            this.strURL = strURL;
+        }
+
+        @Override // error จาก Internet ติดๆ ดับๆ รายงาน error exception e ยอมรับได้
         protected String doInBackground(Void... params) {
-            return null;
+            try {
+
+                OkHttpClient okHttpClient = new OkHttpClient();
+                Request.Builder builder = new Request.Builder();
+                Request request = builder.url(strURL).build();
+                Response response = okHttpClient.newCall(request).execute();
+                return response.body().string();
+
+            } catch (Exception e) {
+                Log.d("29June", "e doInBack ==>" + e.toString());
+                return null;
+            }
+
+
+
         } // doInBack
 
+        //overide method กด Alt + Int เลือก overide method
 
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            Log.d("29June", "JSON ==>" + s);
+         // ติดตามการทำงานได้โดยกด Alt 6 กดติดตาม Debug 29 June
+        } // onPost
     } // SynUser Class
 
 
@@ -52,8 +91,15 @@ public class MainActivity extends AppCompatActivity {
         if (userString.equals("") || passwordString.equals("")) {
             MyAlert myAlert = new MyAlert();
             myAlert.myDialog(this, "มีช่องว่าง", "กรุณากรอกข้อความ");
+        } else {
+            CheckUserPassword();
         }
 
+    }
+
+    private void CheckUserPassword() {
+        SynUser synUser = new SynUser(this, urlJSON);
+        synUser.execute();
     }
 
     public void clickSignUpMain(View view) {

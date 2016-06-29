@@ -7,6 +7,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -43,8 +44,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         LatLng latLng = new LatLng(cmruLatADouble, cmruLngADouble);
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
         // ตัวเลข 16 คือใกล้โลกเท่าไหร่
-    } //Onmapready
 
+        createStationMarker();
+
+    } //Onmapready
+//comment
+    private void createStationMarker() {
+
+        MyData myData = new MyData();
+        double[] latDoubles = myData.getLatStationDoubles();
+        double[] lngDoubles = myData.getLngStationDoubles();
+        int[] iconInts = myData.getIconStationInts();
+
+
+        for (int i=0;i<latDoubles.length;i++) {
+            LatLng latLng = new LatLng(latDoubles[i], lngDoubles[i]);
+            mMap.addMarker(new MarkerOptions().position(latLng)
+            .icon(BitmapDescriptorFactory.fromResource(iconInts [i]))
+            .title("ด่านที่ "+ Integer.toString(i+1)));
+        }
+
+
+
+    } // createStationMarker
 
 
 }// Main Class

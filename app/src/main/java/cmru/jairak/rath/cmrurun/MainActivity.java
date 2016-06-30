@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String urlJSON = "http://swiftcodingthai.com/cmru/php_get_user_rathjairak.php";
     private ImageView imageView;
     private EditText userEditText, passwordEditText;
-    private String userString, passwordString, strID;
+    private String userString, passwordString, strID, goldString;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
                         truePasswordString = jsonObject.getString("Password");
                         nameUserString = jsonObject.getString("Name");
                         strID = jsonObject.getString("id");
-
+                        goldString = jsonObject.getString("Gold");
 
                     }//if
 
@@ -114,6 +114,7 @@ public class MainActivity extends AppCompatActivity {
                     Intent intent = new Intent(MainActivity.this, MapsActivity.class);
                     intent.putExtra("Name", nameUserString);
                     intent.putExtra("userID", strID);
+                    intent.putExtra("Gold", goldString);
                     startActivity(intent);
                     finish();
 

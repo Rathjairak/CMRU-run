@@ -1,13 +1,17 @@
 package cmru.jairak.rath.cmrurun;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
+import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
 import android.util.Log;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -25,17 +29,21 @@ import com.squareup.okhttp.Request;
 import com.squareup.okhttp.RequestBody;
 import com.squareup.okhttp.Response;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.IOException;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
-    private double cmruLatADouble =18.807089, cmruLngADouble = 98.986621;
+    private double cmruLatADouble = 18.807068, cmruLngADouble = 98.986483;
     private double userLatADouble, userLngADouble;
     private LocationManager locationManager;
     private Criteria criteria;
-    private String userIDString, userNameString;
-    private static final String urlEditLocation = "http://swiftcodingthai.com/cmru/edit_location_rathjairak.php";
+    private String userIDString, userNameString, goldString;
+    private static final String urlEditLocation = "http://swiftcodingthai.com/cmru/edit_location_master.php";
+    private boolean statusABoolean = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,47 +59,81 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         criteria.setAltitudeRequired(false);
         criteria.setBearingRequired(false);
 
-        //Get Value from intent
+        //Get Value From Intent
         userIDString = getIntent().getStringExtra("userID");
         userNameString = getIntent().getStringExtra("Name");
-        Log.d("30JuneV1", "userID ==>" + userIDString);
-        Log.d("30JuneV1", "userName ==>" + userNameString);
+        goldString = getIntent().getStringExtra("Gold");
 
-        editLocation();
-
+        Log.d("30JuneV1", "userID ==> " + userIDString);
+        Log.d("30JuneV1", "userName ==> " + userNameString);
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-    } //Main Method
+    }       // Main Method
 
-    private void editLocation() {
+    private class SynLocation extends AsyncTask<Void, Void, String> {
 
-        OkHttpClient okHttpClient = new OkHttpClient();
-        RequestBody requestBody = new FormEncodingBuilder()
-                .add("isAdd", "true")
-                .add("id", userIDString)
-                .add("Lat", Double.toString(userLatADouble))
-                .add("Lng", Double.toString(userLngADouble))
-                .build();
+        private static final String urlJSON = "http://swiftcodingthai.com/cmru/get_user_master.php";
+        private MyData myData;
 
-        Request.Builder builder = new Request.Builder();
-        Request request = builder.url(urlEditLocation).post(requestBody).build();
-        Call call = okHttpClient.newCall(request);
-        call.enqueue(new Callback() {
-            @Override
-            public void onFailure(Request request, IOException e) {
+        @Override
+        protected String doInBackground(Void... voids) {
 
+            try {
+
+                OkHttpClient okHttpClient = new OkHttpClient();
+                Request.Builder builder = new Request.Builder();
+                Request request = builder.url(urlJSON).build();
+                Response response = okHttpClient.newCall(request).execute();
+                return response.body().string();
+
+            } catch (Exception e) {
+                Log.d("30JuneV1", "e doIn ==> " + e.toString());
+                return null;
             }
 
-            @Override
-            public void onResponse(Response response) throws IOException {
+        }   // doIn
 
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+
+            Log.d("30JuneV1", "JSON ==> " + s);
+
+            myData = new MyData();
+            int[] intIcon = myData.getAvataInts();
+
+
+
+            try {
+
+                JSONArray jsonArray = new JSONArray(s);
+
+                for (int i=0;i<jsonArray.length();i++) {
+
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    String strName = jsonObject.getString("Name");
+                    int iconMarker = intIcon[Integer.parseInt(jsonObject.getString("Avata"))];
+                    double douLat = Double.parseDouble(jsonObject.getString("Lat"));
+                    double douLng = Double.parseDouble(jsonObject.getString("Lng"));
+                    LatLng latLng = new LatLng(douLat, douLng);
+                    mMap.addMarker(new MarkerOptions()
+                            .position(latLng)
+                            .icon(BitmapDescriptorFactory.fromResource(iconMarker))
+                            .title(strName));
+
+
+                }   //for
+
+            } catch (Exception e) {
+                Log.d("30JuneV1", "e onPost ==> " + e.toString());
             }
-        });
 
-    } // editLocation
+        }   // onPost
+    }   // SynLocation Class
+
 
     @Override
     protected void onResume() {
@@ -99,25 +141,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         locationManager.removeUpdates(locationListener);
 
-        Location networkLocation = myFindLocation(locationManager.NETWORK_PROVIDER);
-
+        Location networkLocation = myFindLocation(LocationManager.NETWORK_PROVIDER);
         if (networkLocation != null) {
 
             userLatADouble = networkLocation.getLatitude();
             userLngADouble = networkLocation.getLongitude();
 
-
-        } //if
+        }   // if
 
         Location gpsLocation = myFindLocation(LocationManager.GPS_PROVIDER);
         if (gpsLocation != null) {
+
             userLatADouble = gpsLocation.getLatitude();
             userLngADouble = gpsLocation.getLongitude();
 
         }
 
 
-    }// on resume
+    }   // onResume
 
     @Override
     protected void onStop() {
@@ -125,22 +166,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         locationManager.removeUpdates(locationListener);
 
-
     }
 
-    public Location myFindLocation (String strProvider) {
+    public Location myFindLocation(String strProvider) {
 
         Location location = null;
 
         if (locationManager.isProviderEnabled(strProvider)) {
 
             locationManager.requestLocationUpdates(strProvider, 1000, 10, locationListener);
-
             location = locationManager.getLastKnownLocation(strProvider);
 
-
         } else {
-            Log.d("29Junev1", "Cannot Find Location");
+            Log.d("29JuneV1", "Cannot Find Logcation");
         }
 
         return location;
@@ -148,14 +186,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public LocationListener locationListener = new LocationListener() {
-        @Override //ขยับตำแหน่งทำงาน
+        @Override
         public void onLocationChanged(Location location) {
 
             userLatADouble = location.getLatitude();
             userLngADouble = location.getLongitude();
 
-
-        } //onlocationchange
+        }   // onLocationChange
 
         @Override
         public void onStatusChanged(String s, int i, Bundle bundle) {
@@ -174,48 +211,144 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     };
 
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Setup to CMRU
+        //Setup to CMRU
         LatLng latLng = new LatLng(cmruLatADouble, cmruLngADouble);
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
-        // ตัวเลข 16 คือใกล้โลกเท่าไหร่
 
         createStationMarker();
 
         myLoop();
 
-    } //Onmapready
+
+    }   // onMapReady
 
     private void myLoop() {
-        //ใส่ log D
-        Log.d("29JuneV1", "userLas ==>" + userLatADouble);
-        Log.d("29JuneV1", "userLng ==>" + userLngADouble);
+
+        Log.d("29JuneV1", "userLat ==> " + userLatADouble);
+        Log.d("29JuneV1", "userLng ==> " + userLngADouble);
+
+        mMap.clear();
+
+        createStationMarker();
+
+        editLocation();
+
+        checkDistance();
+
+        SynLocation synLocation = new SynLocation();
+        synLocation.execute();
 
 
+        if (statusABoolean) {
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    myLoop();
+                }
+            }, 3000);
+        }
 
-        Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
+    }   // myLoop
+
+    private void checkDistance() {
+
+        MyData myData = new MyData();
+        double[] latStationDoubles = myData.getLatStationDoubles();
+        double[] lngStationDoubles = myData.getLngStationDoubles();
+
+        double douMyDistance = Math.sin(deg2rad(userLatADouble))
+                * Math.sin(deg2rad(latStationDoubles[Integer.parseInt(goldString)]))
+                + Math.cos(deg2rad(userLatADouble))
+                * Math.cos(deg2rad(latStationDoubles[Integer.parseInt(goldString)]))
+                * Math.cos(deg2rad((userLngADouble - lngStationDoubles[Integer.parseInt(goldString)])));
+
+        douMyDistance = Math.acos(douMyDistance);
+        douMyDistance = rad2deg(douMyDistance);
+
+        douMyDistance = douMyDistance * 60 * 1.1515 * 1.609344 * 1000;
+
+        Log.d("30JuneV2", "myDistance เทียบกัน ฐานที่ " + goldString + " มีค่าเท่ากับ " + douMyDistance);
+
+        if (douMyDistance < 10) {
+            confirmDialog();
+        }
+
+
+    }   // checkDistance
+
+    private void confirmDialog() {
+
+        statusABoolean = false;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+        builder.setIcon(R.drawable.doremon48);
+        builder.setTitle("คุณถึงด่านที่ " + Integer.toString(Integer.parseInt(goldString) + 1));
+        builder.setMessage("คุณต้องทำคะแนน 3/5 ถึงจะผ่านไปได้");
+        builder.setPositiveButton("เริ่มตอบคำถาม", new DialogInterface.OnClickListener() {
             @Override
-            public void run() {
-                myLoop();
+            public void onClick(DialogInterface dialogInterface, int i) {
+
+                Intent intent = new Intent(MapsActivity.this, ExerciseActivity.class);
+                intent.putExtra("userID", userIDString);
+                intent.putExtra("Gold", goldString);
+                startActivity(intent);
+                finish();
+
+            }   // onClick
+        });
+        builder.show();
+    }
+
+    private double rad2deg(double douMyDistance) {
+
+        double resutl = 0;
+
+        resutl = douMyDistance * 180 / Math.PI;
+
+        return resutl;
+    }
+
+    private double deg2rad(double userLatADouble) {
+
+        double result = 0;
+
+        result = userLatADouble * Math.PI / 180;
+
+        return result;
+    }
+
+    private void editLocation() {
+
+        OkHttpClient okHttpClient = new OkHttpClient();
+        RequestBody requestBody = new FormEncodingBuilder()
+                .add("isAdd", "true")
+                .add("id", userIDString)
+                .add("Lat", Double.toString(userLatADouble))
+                .add("Lng", Double.toString(userLngADouble))
+                .build();
+        Request.Builder builder = new Request.Builder();
+        Request request = builder.url(urlEditLocation).post(requestBody).build();
+        Call call = okHttpClient.newCall(request);
+        call.enqueue(new Callback() {
+            @Override
+            public void onFailure(Request request, IOException e) {
+
             }
-        }, 3000);
 
-    }//myloop
+            @Override
+            public void onResponse(Response response) throws IOException {
 
-    //comment
+            }
+        });
+
+    }   // editLocation
+
     private void createStationMarker() {
 
         MyData myData = new MyData();
@@ -223,17 +356,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         double[] lngDoubles = myData.getLngStationDoubles();
         int[] iconInts = myData.getIconStationInts();
 
-
-        for (int i=0;i<latDoubles.length;i++) {
+        for (int i = 0; i < latDoubles.length; i++) {
             LatLng latLng = new LatLng(latDoubles[i], lngDoubles[i]);
             mMap.addMarker(new MarkerOptions().position(latLng)
-            .icon(BitmapDescriptorFactory.fromResource(iconInts [i]))
-            .title("ด่านที่ "+ Integer.toString(i+1)));
+                    .icon(BitmapDescriptorFactory.fromResource(iconInts[i]))
+                    .title("ด่านที่ " + Integer.toString(i + 1)));
         }
 
+    }   // createStaionMarker
 
 
-    } // createStationMarker
-
-
-}// Main Class
+}   // Main Class

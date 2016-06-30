@@ -17,6 +17,15 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.squareup.okhttp.Call;
+import com.squareup.okhttp.Callback;
+import com.squareup.okhttp.FormEncodingBuilder;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.Response;
+
+import java.io.IOException;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -25,6 +34,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private double userLatADouble, userLngADouble;
     private LocationManager locationManager;
     private Criteria criteria;
+    private String userIDString, userNameString;
+    private static final String urlEditLocation = "http://swiftcodingthai.com/cmru/edit_location_rathjairak.php";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,11 +51,47 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         criteria.setAltitudeRequired(false);
         criteria.setBearingRequired(false);
 
+        //Get Value from intent
+        userIDString = getIntent().getStringExtra("userID");
+        userNameString = getIntent().getStringExtra("Name");
+        Log.d("30JuneV1", "userID ==>" + userIDString);
+        Log.d("30JuneV1", "userName ==>" + userNameString);
+
+        editLocation();
+
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
     } //Main Method
+
+    private void editLocation() {
+
+        OkHttpClient okHttpClient = new OkHttpClient();
+        RequestBody requestBody = new FormEncodingBuilder()
+                .add("isAdd", "true")
+                .add("id", userIDString)
+                .add("Lat", Double.toString(userLatADouble))
+                .add("Lng", Double.toString(userLngADouble))
+                .build();
+
+        Request.Builder builder = new Request.Builder();
+        Request request = builder.url(urlEditLocation).post(requestBody).build();
+        Call call = okHttpClient.newCall(request);
+        call.enqueue(new Callback() {
+            @Override
+            public void onFailure(Request request, IOException e) {
+
+            }
+
+            @Override
+            public void onResponse(Response response) throws IOException {
+
+            }
+        });
+
+    } // editLocation
 
     @Override
     protected void onResume() {
@@ -155,6 +202,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //ใส่ log D
         Log.d("29JuneV1", "userLas ==>" + userLatADouble);
         Log.d("29JuneV1", "userLng ==>" + userLngADouble);
+
+
+
         Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             @Override
